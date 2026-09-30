@@ -3,7 +3,7 @@ const assert = require('assert');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 const ADMIN_EMAIL = 'admin@parking.com';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ;
 
 async function loginAsAdmin() {
   const driver = await new Builder().forBrowser('chrome').build();
