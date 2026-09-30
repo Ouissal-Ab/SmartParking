@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Smart Parking · Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --gold:#FAB95B;--gold-dk:#D49543;--navy:#1A3263;--steel:#547792;
+  --pearl:#E8E2DB;--surface:#F5F0E8;--card:#FFFFFF;--ink:#1A1F2E;
+  --muted:#5C6577;--soft:#8A92A0;--border:rgba(26,31,46,0.08);
+  --shadow:0 12px 40px -8px rgba(26,31,46,.10);
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Inter',system-ui,sans-serif;background:var(--surface);color:var(--ink);
+  -webkit-font-smoothing:antialiased;line-height:1.6;font-size:15px;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(250,185,91,.22), transparent 45%),
+    radial-gradient(circle at 92% 92%, rgba(26,50,99,.10), transparent 50%);
+  background-attachment:fixed;
+  min-height:100vh;
+}
+h1,h2,h3,h4{font-family:'Plus Jakarta Sans','Inter',sans-serif;letter-spacing:-.015em;color:var(--ink);margin:0}
+h1{font-size:2.4rem;font-weight:800;line-height:1.1}
+h2{font-size:1.55rem;font-weight:700;margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border)}
+h2:first-of-type{border-top:none;padding-top:0;margin-top:0}
+h3{font-size:1.1rem;font-weight:700;margin-top:1.6rem}
+h4{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:1.2rem}
+p{margin:.7rem 0}
+a{color:var(--navy);text-decoration:none;border-bottom:1px solid rgba(26,50,99,.25);transition:all .15s}
+a:hover{color:var(--gold-dk);border-color:var(--gold)}
+ul,ol{padding-left:1.4rem}
+li{margin:.25rem 0}
+code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.85em;background:rgba(26,50,99,.07);padding:1px 6px;border-radius:5px;color:var(--navy)}
+pre{background:var(--ink);color:#E8E2DB;padding:1.1rem 1.3rem;border-radius:var(--radius);overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.55;box-shadow:var(--shadow);margin:1rem 0}
+pre code{background:transparent;padding:0;color:inherit;font-size:inherit}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:.85rem;margin:1rem 0;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+th,td{padding:.65rem 1rem;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{background:rgba(250,185,91,.12);color:var(--ink);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(250,185,91,.04)}
+blockquote{margin:1rem 0;padding:.7rem 1rem;background:rgba(250,185,91,.10);border-left:3px solid var(--gold);border-radius:8px}
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);gap:3rem;max-width:1200px;margin:0 auto;padding:2.5rem 2rem}
+@media (max-width:900px){.shell{grid-template-columns:1fr;gap:1.5rem;padding:1.5rem 1.2rem}}
+header.bar{position:sticky;top:0;z-index:30;background:rgba(245,240,232,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(26,31,46,.06)}
+.bar-inner{max-width:1200px;margin:0 auto;padding:.9rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+@media (max-width:900px){.bar-inner{padding:.9rem 1.2rem}}
+.logo{display:flex;align-items:center;gap:.65rem;font-weight:700;color:var(--ink);border:none}
+.logo:hover{color:var(--ink)}
+.logo-tile{width:34px;height:34px;border-radius:8px;background:var(--gold);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 4px 12px rgba(250,185,91,.4)}
+.bar-nav{display:flex;gap:.25rem;flex-wrap:wrap}
+.bar-nav a{font-size:.85rem;padding:.4rem .8rem;border-radius:7px;background:transparent;border:none;color:var(--muted);font-weight:500}
+.bar-nav a:hover{background:rgba(26,31,46,.06);color:var(--ink)}
+.bar-nav a.active{background:var(--gold);color:var(--ink);font-weight:600}
+aside.toc{position:sticky;top:calc(72px + 1rem);align-self:start;font-size:.83rem;max-height:calc(100vh - 80px);overflow-y:auto}
+@media (max-width:900px){aside.toc{position:static;display:none}}
+.toc-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.6rem;font-weight:700}
+.toc a{display:block;padding:.32rem .65rem;color:var(--muted);border:none;border-left:2px solid transparent;margin:1px 0;border-radius:0 6px 6px 0;line-height:1.4}
+.toc a:hover{background:rgba(26,31,46,.04);color:var(--ink);border-color:var(--gold-dk)}
+.toc a.sub{padding-left:1.4rem;font-size:.78rem}
+.hero{margin-bottom:2.5rem}
+.eyebrow{display:inline-flex;align-items:center;gap:.4rem;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold-dk);background:rgba(250,185,91,.12);padding:.35rem .8rem;border-radius:99px;margin-bottom:.9rem}
+.lead{color:var(--muted);font-size:1.05rem;max-width:60ch;margin-top:.4rem}
+main.content{min-width:0}
+.callout{margin:1rem 0;padding:.9rem 1.1rem;border-radius:var(--radius);background:rgba(255,255,255,.7);border:1px solid var(--border);box-shadow:var(--shadow);font-size:.92rem;backdrop-filter:blur(8px)}
+.callout.tip{background:rgba(250,185,91,.10);border-color:rgba(250,185,91,.3)}
+.diagram{background:var(--ink);color:#E8E2DB;padding:1.2rem;border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:.74rem;line-height:1.5;overflow-x:auto;white-space:pre;box-shadow:var(--shadow);margin:1rem 0}
+.tree{background:rgba(255,255,255,.6);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.6;overflow-x:auto;white-space:pre;backdrop-filter:blur(6px);margin:1rem 0}
+.token-card{display:inline-flex;align-items:center;gap:.5rem;background:#fff;border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.85em;margin:.2rem}
+.swatch{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
+.flow{background:rgba(255,255,255,.6);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;font-size:.85rem;backdrop-filter:blur(6px)}
+.flow .step{display:flex;gap:.9rem;margin:.4rem 0}
+.flow .num{flex-shrink:0;width:28px;height:28px;border-radius:6px;background:var(--gold);color:var(--ink);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.75rem}
+.flow .step.row .num{background:var(--navy);color:#fff}
+footer.foot{text-align:center;font-size:.78rem;color:var(--soft);padding:3rem 1rem 2rem}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <a href="installation.html" class="logo">
+      <span class="logo-tile">🚗</span>
+      <span>Smart Parking · Documentation</span>
+    </a>
+    <nav class="bar-nav">
+      <a href="installation.html">Installation</a>
+      <a href="architecture.html" class="active">Architecture</a>
+      <a href="backend-changes.html">Journal backend</a>
+    </nav>
+  </div>
+</header>
+
+<div class="shell">
+
+  <aside class="toc">
+    <p class="toc-title">Sommaire</p>
+    <a href="#overview">1 · Vue d'ensemble</a>
+    <a href="#frontend-tree">2 · Frontend</a>
+    <a href="#route-groups" class="sub">Route groups</a>
+    <a href="#auth">3 · Authentification</a>
+    <a href="#adapters">4 · Adapters</a>
+    <a href="#api-client">5 · API client</a>
+    <a href="#middleware">6 · Middleware</a>
+    <a href="#websocket">7 · WebSocket</a>
+    <a href="#ws-stack" class="sub">Pile technique</a>
+    <a href="#ws-topics" class="sub">Topics</a>
+    <a href="#ws-flow" class="sub">Flux d'une mise à jour</a>
+    <a href="#ws-sources" class="sub">Sources backend</a>
+    <a href="#ws-client" class="sub">Client singleton</a>
+    <a href="#ws-hook" class="sub">Hook React</a>
+    <a href="#design">8 · Design system</a>
+    <a href="#qr">9 · QR handoff</a>
+    <a href="#backend-tree">10 · Backend</a>
+    <a href="#add-page">11 · Ajouter une page</a>
+    <a href="#add-topic">12 · Ajouter un topic</a>
+  </aside>
+
+  <main class="content">
+
+    <header class="hero">
+      <span class="eyebrow">🏗️ Architecture du code</span>
+      <h1>Comment Smart Parking est construit</h1>
+      <p class="lead">
+        Document technique pour les développeurs. Explique où se trouve quoi, comment les
+        briques communiquent, et en détail comment fonctionne le <strong>temps réel par
+        WebSocket</strong>.
+      </p>
+    </header>
+
+    <h2 id="overview">1 · Vue d'ensemble</h2>
+    <div class="diagram">┌─────────────────┐    HTTP REST (Axios, JWT)     ┌───────────────────────┐
+│                 │ ─────────────────────────────▶ │                       │
+│  Next.js 14     │                                │  Spring Boot 3        │
+│  Frontend       │ ◀───────────────────────────── │  Backend              │
+│  (React 18)     │    JSON                        │  + JPA / Hibernate    │
+│                 │                                │                       │
+│                 │    STOMP / SockJS (/ws)        │                       │
+│                 │ ◀══════════════════════════════▶                       │
+└─────────────────┘    Mises à jour live           └───────────┬───────────┘
+                                                              │ JDBC
+                                                              ▼
+                                                   ┌──────────────────────┐
+                                                   │   PostgreSQL 14+     │
+                                                   │   smartparking       │
+                                                   └──────────────────────┘</div>
+
+    <table>
+      <thead><tr><th>Brique</th><th>Port</th><th>Rôle</th></tr></thead>
+      <tbody>
+        <tr><td>Frontend Next.js</td><td>3000</td><td>Pages, hooks, client WebSocket</td></tr>
+        <tr><td>Backend Spring Boot</td><td>8080</td><td>API REST + STOMP /ws + JWT</td></tr>
+        <tr><td>PostgreSQL</td><td>5432</td><td>Base smartparking</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="frontend-tree">2 · Frontend — Arborescence</h2>
+
+    <div class="tree">smart-parking/
+├── app/                              ← App Router Next.js 14
+│   ├── layout.tsx                    ← Layout racine (police, Toaster, Leaflet CSS)
+│   ├── globals.css                   ← Design system (glassmorphism, mesh)
+│   ├── api/
+│   │   └── lan-ip/route.ts           ← Renvoie l'IP LAN du serveur dev
+│   ├── (public)/                     ← Route group : pages publiques
+│   │   ├── page.tsx                  ← Landing (/)
+│   │   ├── login/page.tsx
+│   │   └── register/page.tsx
+│   ├── (user)/                       ← Pages utilisateur connecté
+│   │   ├── layout.tsx                ← Layout : Navbar + MeshBackdrop
+│   │   ├── dashboard/page.tsx        ← Carte + liste live
+│   │   ├── reservations/page.tsx
+│   │   ├── reserve/[parkingId]/page.tsx
+│   │   ├── payment/page.tsx          ← Carte, QR mobile, virement, Apple Pay
+│   │   └── confirmation/page.tsx
+│   └── (admin)/                      ← Réservées rôle ADMIN
+│       ├── layout.tsx                ← Layout : AdminSidebar
+│       ├── admin/page.tsx
+│       ├── admin/parkings/page.tsx
+│       ├── admin/reservations/page.tsx
+│       └── admin/users/page.tsx
+│
+├── components/
+│   ├── ui/                           ← Primitives
+│   │   ├── Button.tsx · Input.tsx · Card.tsx
+│   │   ├── Badge.tsx · Modal.tsx · Table.tsx · StatCard.tsx
+│   ├── layout/
+│   │   ├── Navbar.tsx · AdminSidebar.tsx · Footer.tsx
+│   │   ├── MeshBackdrop.tsx · AuthBackdrop.tsx
+│   ├── parking/
+│   │   ├── ParkingMap.tsx · ParkingCard.tsx
+│   │   ├── ParkingModal.tsx · AvailabilityBadge.tsx
+│   ├── reservation/
+│   │   ├── ReservationStepper.tsx · BackendSpotSelector.tsx
+│   │   ├── ReservationCard.tsx
+│   ├── charts/
+│   │   ├── OccupancyChart.tsx · ReservationTrend.tsx
+│   └── MobileHandoffQR.tsx           ← QR pour passer du desktop au mobile
+│
+├── lib/
+│   ├── api.ts                        ← Axios + intercepteurs (JWT, 401)
+│   ├── auth.ts                       ← login(), saveSession(), getStoredUser()
+│   ├── adapters.ts                   ← Conversion DTO backend ↔ types front
+│   ├── realtime.ts                   ← Client STOMP singleton
+│   ├── utils.ts                      ← cn(), formatCurrency (MAD), formatDate
+│   ├── mock.ts                       ← Fallback data si API HS
+│   └── hooks/
+│       ├── useLivePlaces.ts          ← S'abonne à /topic/places
+│       └── useLiveReservations.ts    ← S'abonne à /topic/reservations
+│
+├── types/
+│   ├── parking.ts · reservation.ts · user.ts
+│
+├── middleware.ts                     ← Middleware Edge (redirige selon role+token)
+├── tailwind.config.ts                ← Palette or / navy / pearl
+└── package.json</div>
+
+    <h3 id="route-groups">Pourquoi des « route groups » <code>(public)</code>, <code>(user)</code>, <code>(admin)</code> ?</h3>
+    <p>
+      Les parenthèses en App Router permettent de regrouper des pages sans préfixer l'URL.
+      Elles servent surtout à fournir un <strong>layout dédié</strong> :
+    </p>
+    <ul>
+      <li><code>(public)/page.tsx</code> → URL <code>/</code> (pas de sidebar/navbar)</li>
+      <li><code>(user)/layout.tsx</code> → wrap chaque page utilisateur avec <code>&lt;Navbar /&gt;</code></li>
+      <li><code>(admin)/layout.tsx</code> → wrap chaque page admin avec <code>&lt;AdminSidebar /&gt;</code></li>
+    </ul>
+
+    <h2 id="auth">3 · Authentification</h2>
+
+    <div class="flow">
+      <div class="step"><div class="num">1</div><div><code>POST /auth/login</code> → <code>{token, role, prenom, nom, email}</code></div></div>
+      <div class="step"><div class="num">2</div><div><strong>localStorage</strong> ← <code>token</code>, <code>user</code></div></div>
+      <div class="step"><div class="num">3</div><div><strong>cookies</strong> ← <code>token</code> et <code>role</code> (lus par le middleware Edge)</div></div>
+      <div class="step"><div class="num">4</div><div><code>GET /user/profile</code> → données complètes (téléphone, immatriculation)</div></div>
+      <div class="step"><div class="num">5</div><div>Hard nav avec <code>window.location.href</code> vers <code>/dashboard</code> ou <code>/admin</code> — garantit que les cookies fraîchement écrits sont vus par le middleware sur tous les navigateurs (notamment Safari mobile).</div></div>
+    </div>
+
+    <div class="callout">
+      <strong>Pourquoi <code>localStorage</code> ET cookies ?</strong>
+      <ul>
+        <li><code>localStorage</code> → lu côté client par <code>axios</code> pour mettre l'<code>Authorization</code> header</li>
+        <li><code>cookies</code> → lu côté serveur Edge par <code>middleware.ts</code> avant le rendu</li>
+      </ul>
+    </div>
+
+    <h2 id="adapters">4 · Couche d'adaptation (<code>lib/adapters.ts</code>)</h2>
+    <p>
+      Le backend renvoie ses champs en <strong>français</strong>, le frontend type ses objets en
+      <strong>anglais</strong>. Une fonction d'adaptation traduit dans les deux sens, pour ne
+      pas polluer chaque composant avec <code>parking.nom</code>.
+    </p>
+    <table>
+      <thead><tr><th>Backend (Spring)</th><th>Frontend (TS)</th></tr></thead>
+      <tbody>
+        <tr><td><code>nom</code></td><td><code>name</code></td></tr>
+        <tr><td><code>adresse</code></td><td><code>address</code></td></tr>
+        <tr><td><code>nombreDePlaces</code></td><td><code>totalSpots</code></td></tr>
+        <tr><td><code>tarifParHeure</code></td><td><code>hourlyRate</code></td></tr>
+        <tr><td><code>heureOuverture / heureFermeture</code></td><td><code>openTime / closeTime</code></td></tr>
+        <tr><td><code>dateReservation + heureDebut</code> (LocalDate + LocalTime)</td><td><code>startTime</code> (ISO datetime)</td></tr>
+        <tr><td><code>statut: EN_ATTENTE / ACTIVE / TERMINEE / ANNULEE</code></td><td><code>status: ACTIVE / COMPLETED / CANCELLED</code></td></tr>
+        <tr><td><code>role: ROLE_ADMIN / ROLE_USER</code></td><td><code>role: ADMIN / USER</code></td></tr>
+        <tr><td><code>latitude/longitude: null</code></td><td>fallback déterministe autour de Marrakech</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="api-client">5 · Client API (<code>lib/api.ts</code>)</h2>
+<pre><code>const api = axios.create({ baseURL: computeBaseUrl(), withCredentials: true });</code></pre>
+    <p><code>computeBaseUrl()</code> est dynamique :</p>
+    <ul>
+      <li>Page sur <code>localhost</code> → API = <code>http://localhost:8080</code></li>
+      <li>Page sur IP LAN (mobile) → API = <code>http://&lt;même-IP&gt;:8080</code></li>
+    </ul>
+    <p>Cela permet à un téléphone qui scanne le QR de joindre le backend sans config manuelle.</p>
+    <p>Deux intercepteurs :</p>
+    <ul>
+      <li><strong>Request</strong> : ajoute <code>Authorization: Bearer &lt;token&gt;</code></li>
+      <li><strong>Response</strong> : sur <code>401</code>, nettoie la session et redirige vers <code>/login</code></li>
+    </ul>
+
+    <h2 id="middleware">6 · Middleware Edge</h2>
+<pre><code>matcher: ['/admin/:path*', '/dashboard', '/reserve/:path*',
+          '/reservations', '/payment', '/confirmation']</code></pre>
+    <ul>
+      <li><code>/admin/*</code> → cookie <code>role</code> doit être <code>ADMIN</code>, sinon redirige <code>/dashboard</code></li>
+      <li>Routes utilisateur → cookie <code>token</code> requis, sinon redirige <code>/login?redirect=&lt;url-origine&gt;</code></li>
+    </ul>
+
+    <h2 id="websocket">7 · WebSocket — Temps réel</h2>
+    <p>
+      Disponibilité des places et nouvelles réservations mises à jour <strong>instantanément
+      sur tous les clients connectés</strong>, sans rafraîchir.
+    </p>
+
+    <h3 id="ws-stack">7.1 Pile technique</h3>
+    <table>
+      <thead><tr><th>Couche</th><th>Backend</th><th>Frontend</th></tr></thead>
+      <tbody>
+        <tr><td>Protocole</td><td>STOMP over SockJS</td><td>idem</td></tr>
+        <tr><td>Lib</td><td><code>spring-boot-starter-websocket</code></td><td><code>@stomp/stompjs</code> + <code>sockjs-client</code></td></tr>
+        <tr><td>Endpoint</td><td><code>ws://&lt;host&gt;:8080/ws</code></td><td><code>new SockJS(...)</code></td></tr>
+        <tr><td>Broker</td><td><code>enableSimpleBroker("/topic")</code></td><td><code>subscribe("/topic/places", ...)</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="ws-topics">7.2 Topics</h3>
+    <table>
+      <thead><tr><th>Topic</th><th>Émis par</th><th>Payload</th><th>Abonnés</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>/topic/places</code></td>
+          <td><code>sendPlaceUpdate()</code></td>
+          <td><code>{id, numero, statut, parkingId}</code></td>
+          <td>Dashboard user, Reserve, Dashboard admin</td>
+        </tr>
+        <tr>
+          <td><code>/topic/reservations</code></td>
+          <td><code>sendReservationCreated()</code></td>
+          <td><code>{id, code, dateReservation, heureDebut, heureFin, montantTotal, statut, user, parking, place}</code></td>
+          <td>Admin reservations, Dashboard admin</td>
+        </tr>
+        <tr>
+          <td><code>/topic/stats</code></td>
+          <td><code>sendParkingStats()</code></td>
+          <td>(libre)</td>
+          <td>Réservé pour usage futur</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="ws-flow">7.3 Chaîne complète d'une mise à jour</h3>
+    <p>Quand l'utilisatrice Marie réserve la place P12 du Parking IA :</p>
+    <div class="diagram">   Frontend Marie                Backend                    Frontend Lucas (autre onglet)
+   ───────────────              ───────────                ────────────────────────────────
+1. POST /user/reserve  ───────▶
+                                ReservationService
+                                .createFromRequest()
+                                ├── place.statut=RESERVE
+                                ├── placeRepository.save()
+                                ├── publisher.sendPlaceUpdate()  ──▶ /topic/places
+                                └── publisher.sendReservationCreated() ──▶ /topic/reservations
+                                                                            │
+                                                                            ▼ broadcast
+                       ──────────────────────────────────────────────────────────
+                       │                                                  │
+2. Réponse HTTP 200 ◀──┘                                                  ▼
+3. Marie route vers /payment                       useLivePlaces(handler)
+                                                    └─ setPlaces(...)
+                                                       → grille MAJ
+                                                       → carte recompte les places libres
+                                                   useLiveReservations(handler)
+                                                    └─ admin reservations préprend la ligne
+                                                       admin dashboard refresh stats</div>
+
+    <h3 id="ws-sources">7.4 Trois sources de publication côté backend</h3>
+    <ol>
+      <li><strong><code>ReservationService.createFromRequest()</code></strong> — après save place en <code>RESERVE</code></li>
+      <li><strong><code>PlaceService.updateStatus()</code></strong> — quand un admin change manuellement</li>
+      <li><strong><code>ReservationScheduler.updateReservations()</code></strong> — toutes les 60 s, libère les places des résa expirées</li>
+    </ol>
+
+    <h3 id="ws-client">7.5 Client singleton (<code>lib/realtime.ts</code>)</h3>
+<pre><code>const client = new Client({
+  webSocketFactory: () =&gt; new SockJS('http://&lt;host&gt;:8080/ws'),
+  reconnectDelay: 3000,
+  heartbeatIncoming: 10000,
+  heartbeatOutgoing: 10000,
+});</code></pre>
+    <ul>
+      <li><strong>reconnectDelay</strong> — se reconnecte automatiquement après 3 s</li>
+      <li><strong>heartbeat</strong> — ping de chaque côté pour détecter une coupure silencieuse (Wi-Fi mobile)</li>
+      <li>Re-souscrit automatiquement aux topics actifs après reconnexion</li>
+    </ul>
+
+    <p>API publique :</p>
+<pre><code>function subscribeTopic&lt;T&gt;(topic: string, handler: (msg: T) =&gt; void): () =&gt; void</code></pre>
+    <p>Retourne une fonction <code>unsubscribe</code>. Plusieurs handlers peuvent s'abonner au même topic — un seul <code>subscribe</code> STOMP est ouvert.</p>
+
+    <h3 id="ws-hook">7.6 Hook React</h3>
+<pre><code>export function useLivePlaces(handler: (u: PlaceUpdate) =&gt; void) {
+  useEffect(() =&gt; {
+    const unsub = subscribeTopic&lt;PlaceUpdate&gt;('/topic/places', handler);
+    return unsub;
+  }, [handler]);
+}</code></pre>
+    <div class="callout">
+      Le <code>handler</code> doit être <strong>stable</strong> (utilisez <code>useCallback</code>), sinon il se réabonne à chaque rendu et perd les messages.
+    </div>
+
+    <h2 id="design">8 · Design system</h2>
+    <p>
+      <span class="token-card"><span class="swatch" style="background:#FAB95B"></span>Or <code>#FAB95B</code></span>
+      <span class="token-card"><span class="swatch" style="background:#D49543"></span>Or foncé <code>#D49543</code></span>
+      <span class="token-card"><span class="swatch" style="background:#1A3263"></span>Navy <code>#1A3263</code></span>
+      <span class="token-card"><span class="swatch" style="background:#547792"></span>Steel <code>#547792</code></span>
+      <span class="token-card"><span class="swatch" style="background:#E8E2DB"></span>Pearl <code>#E8E2DB</code></span>
+      <span class="token-card"><span class="swatch" style="background:#B85450"></span>Terracotta <code>#B85450</code></span>
+    </p>
+    <p>Classes utilitaires : <code>.glass</code>, <code>.glass-card</code>, <code>.glass-pill</code>, <code>.mesh-bg</code>, <code>.gradient-text</code>, <code>.grid-pattern</code>.</p>
+
+    <h2 id="qr">9 · QR de handoff mobile</h2>
+    <p>Composant : <code>components/MobileHandoffQR.tsx</code>.</p>
+    <ol>
+      <li>Récupère <code>window.location.pathname</code></li>
+      <li><code>fetch('/api/lan-ip')</code> → <code>{ip: "192.168.x.x"}</code></li>
+      <li>Remplace <code>localhost</code> par cette IP</li>
+      <li>Rend <code>&lt;QRCodeSVG value={url} /&gt;</code></li>
+    </ol>
+    <p>
+      Route serveur <code>app/api/lan-ip/route.ts</code> — lit <code>os.networkInterfaces()</code>
+      et renvoie la première IPv4 non-internal.
+    </p>
+
+    <h2 id="backend-tree">10 · Backend — Structure</h2>
+    <div class="tree">src/main/java/com/example/Parking/
+├── ParkingApplication.java          ← @SpringBootApplication
+├── config/
+│   ├── CorsConfig.java              ← CorsConfigurationSource bean
+│   ├── WebSocketConfig.java         ← STOMP /ws, broker /topic
+│   ├── PasswordConfig.java          ← BCryptPasswordEncoder
+│   └── AdminSeeder.java             ← admin@parking.com / admin123 au boot
+├── security/
+│   ├── SecurityConfig.java          ← Filter chain (JWT, CORS, OPTIONS)
+│   ├── JwtService.java              ← generateToken(email, role), extractRole
+│   ├── JwtFilter.java
+│   └── CustomUserDetailsService.java
+├── controller/
+│   ├── AuthController.java          ← /auth/**
+│   ├── UserController.java          ← /user/parkings, /user/reserve...
+│   ├── PaymentController.java       ← /user/payment
+│   ├── ParkingController.java       ← /admin/parkings CRUD
+│   ├── ReservationController.java   ← /admin/reservations + PDF + QR
+│   ├── AdminUserController.java     ← /admin/users (sortie DTO sûre)
+│   ├── DashboardController.java     ← /admin/dashboard/stats
+│   ├── PlaceController.java         ← /places/parking/{id}
+│   └── IAController.java            ← intégration IA (optionnel)
+├── service/
+│   ├── AuthService.java
+│   ├── UserService.java
+│   ├── ParkingService.java          ← delete @Transactional cascade
+│   ├── ReservationService.java      ← publie sur WS au save
+│   ├── PlaceService.java            ← publie sur WS sur update
+│   ├── PaymentService.java
+│   ├── PdfService.java              ← jPDF reçus
+│   └── QrCodeService.java           ← ZXing
+├── realtime/
+│   └── PlaceRealtimePublisher.java  ← Wrapper SimpMessagingTemplate
+├── scheduler/
+│   └── ReservationScheduler.java    ← @Scheduled 60s, libère les places
+├── repository/                      ← Spring Data JPA
+├── entity/                          ← @Entity JPA
+│   ├── User · Parking · Place · Reservation
+│   └── enums : StatutPlace, StatutReservation, MethodePaiement
+└── dto/                             ← Requêtes/réponses
+    ├── LoginRequest · RegisterRequest · AuthResponse
+    ├── UserResponse · ReservationRequest · ReservationResponse
+    └── PaymentRequest</div>
+
+    <h2 id="add-page">11 · Comment ajouter une page</h2>
+    <ol>
+      <li>Créer <code>app/(user)/ma-page/page.tsx</code> avec <code>'use client'</code> si interactif</li>
+      <li>Ajouter le lien dans <code>components/layout/Navbar.tsx</code></li>
+      <li>Mettre à jour <code>middleware.ts</code> matcher si protégée</li>
+      <li>API : <code>import api from '@/lib/api'</code> → <code>await api.get(...)</code></li>
+      <li>Temps réel : <code>import { useLivePlaces } from '@/lib/hooks/useLivePlaces'</code></li>
+    </ol>
+
+    <h2 id="add-topic">12 · Comment ajouter un topic WebSocket</h2>
+    <h4>Backend</h4>
+<pre><code>@Service
+@RequiredArgsConstructor
+public class MonPublisher {
+  private final SimpMessagingTemplate template;
+  public void send(MonDto dto) {
+    template.convertAndSend("/topic/mon-topic", dto);
+  }
+}</code></pre>
+
+    <h4>Frontend</h4>
+<pre><code>// lib/hooks/useMonTopic.ts
+import { useEffect } from 'react';
+import { subscribeTopic } from '@/lib/realtime';
+
+export function useMonTopic(handler: (msg: MonDto) =&gt; void) {
+  useEffect(() =&gt; subscribeTopic&lt;MonDto&gt;('/topic/mon-topic', handler), [handler]);
+}</code></pre>
+
+    <div class="callout tip" style="margin-top:2.5rem">
+      Pour lancer l'app, voyez <a href="installation.html">Installation</a>.
+      Pour les modifications apportées au backend Spring Boot d'origine, voyez le
+      <a href="backend-changes.html">Journal backend</a>.
+    </div>
+
+  </main>
+</div>
+
+<footer class="foot">© Smart Parking — Documentation générée localement</footer>
+</body>
+</html>
